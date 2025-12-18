@@ -77,7 +77,7 @@ PHASE 3: DEPLOY PRINT SERVER (still via SSH)
 1. Copy the print-server code to the server:
 
    From your Windows machine (new terminal):
-   scp -r C:\Users\daveb\PROJECTS\print-server print@printserver.local:~/
+   scp -r /path/to/print-server print@printserver.local:~/
 
 2. Back in SSH, configure and start:
 

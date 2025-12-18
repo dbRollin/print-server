@@ -2,8 +2,6 @@
 
 **Project Specification Document**
 
-BruTek / Titan USA
-
 ---
 
 ## Executive Summary
