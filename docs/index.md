@@ -2,8 +2,9 @@
 
 ## Setup Guides
 
-- [Linux Server Setup](linux-setup.md) - Fresh Ubuntu install to working print server
+- [Linux Server Setup](linux-setup.md) - Fresh Debian/Ubuntu install to working print server
 - [Quick Checklist](checklist.md) - Printable checklist for setup day
+- [CLI Cheatsheet](cli-cheatsheet.md) - Common commands reference
 
 ## What You Get After Setup
 

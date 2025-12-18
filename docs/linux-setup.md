@@ -4,13 +4,11 @@ Fresh machine to working print server with management UIs.
 
 ## What You'll Get
 
-After setup, you'll have:
-
 | Service | Port | Purpose |
 |---------|------|---------|
-| **Cockpit** | 9090 | System management (updates, network, disks) |
-| **Portainer** | 9000 | Container management (deploy/manage apps) |
 | **Print Server** | 5001 | The print API |
+| **Portainer** | 9000 | Container management (deploy/manage apps) |
+| **Cockpit** | 9090 | System management (updates, network, disks) |
 | **CUPS** | 631 | Document printer management |
 
 All accessible via web browser from any device on the network.
@@ -21,165 +19,239 @@ Any of these work:
 
 | Option | Cost | Notes |
 |--------|------|-------|
-| Beelink Mini S12 Pro | ~$130 | Great choice, overkill but solid |
-| Raspberry Pi 4/5 (2GB+) | ~$45-80 | Small, silent, works well |
-| Old laptop/desktop | Free | Anything from last 10 years |
 | Dell/HP/Lenovo Mini PC | $50-80 used | Business-grade, reliable |
+| Beelink Mini S12 Pro | ~$130 | Overkill but solid |
+| Raspberry Pi 4/5 (2GB+) | ~$45-80 | Small, silent |
+| Old laptop/desktop | Free | Anything from last 10 years |
+
+## OS Options
+
+| OS | Recommendation |
+|----|----------------|
+| **Debian 13** | Recommended - stable installer, fewer issues |
+| Ubuntu Server 24.04 | Works, but installer has known bugs on some hardware |
+
+If Ubuntu installer crashes (common on Dell hardware), use Debian instead.
+
+---
 
 ## Step 1: Create Bootable USB
 
-**On Windows:**
+**Download:**
+- **Debian 13**: https://cdimage.debian.org/debian-cd/current/amd64/iso-dvd/
+- Ubuntu Server 24.04: https://ubuntu.com/download/server
 
-1. Download Ubuntu Server 24.04 LTS:
-   https://ubuntu.com/download/server
+**Flash with Rufus** (Windows):
+1. Download Rufus: https://rufus.ie/
+2. Insert USB drive (8GB+)
+3. Open Rufus, select ISO, select USB
+4. Click Start (use ISO mode if asked)
 
-2. Download Rufus:
-   https://rufus.ie/
+---
 
-3. Insert USB drive (8GB+), run Rufus:
-   - Select your USB drive
-   - Select the Ubuntu ISO
-   - Click Start
+## Step 2: Install OS
 
-## Step 2: Install Ubuntu
+1. Boot from USB (F12/F2/Del during startup)
+2. Follow installer prompts:
 
-1. Boot from USB (F12/F2/Del during startup for boot menu)
-2. Choose "Install Ubuntu Server"
-3. Follow prompts:
-   - Language: English
-   - Keyboard: Your layout
-   - Network: DHCP (default)
-   - Storage: Use entire disk
-   - Profile:
-     - Name: `printserver`
-     - Server name: `printserver`
-     - Username: `print`
-     - Password: (remember this!)
-   - SSH: **Install OpenSSH server** ← Important!
-   - Featured snaps: Skip
+| Setting | Value |
+|---------|-------|
+| Language | English |
+| Hostname | `printserver` |
+| Username | Your choice (e.g., `admin`) |
+| Password | Remember this! |
+| Disk | Use entire disk |
+| SSH | **Install SSH server** |
+| Desktop | **Don't install** (select SSH + standard utilities only) |
 
-4. Reboot, remove USB
+3. Reboot, remove USB
 
-## Step 3: Bootstrap (From Another Computer)
+---
 
-SSH in:
+## Step 3: Connect and Setup Base
+
+**SSH from another computer:**
 ```bash
-ssh print@printserver.local
-# or: ssh print@<IP address shown during install>
+ssh username@<IP-address>
 ```
 
-Run the bootstrap script:
+**Install sudo** (Debian minimal doesn't include it):
 ```bash
-curl -fsSL https://raw.githubusercontent.com/YOUR_REPO/print-server/main/scripts/bootstrap.sh | bash
-```
-
-This installs:
-- Docker
-- Portainer (container management)
-- Cockpit (system management)
-- CUPS (document printing)
-- USB printer rules
-
-**Log out and back in when done** (for Docker permissions):
-```bash
+su -
+apt update && apt install -y sudo
+usermod -aG sudo username
 exit
-# Then SSH back in
-```
-
-## Step 4: Access Management UIs
-
-Open a browser on any device on the same network:
-
-- **Cockpit**: `https://printserver.local:9090`
-  - Login with your `print` user credentials
-  - Manage system updates, networking, storage
-
-- **Portainer**: `http://printserver.local:9000`
-  - Create admin account on first visit
-  - This is where you manage containers
-
-## Step 5: Deploy Print Server
-
-```bash
-# Find label printer
-lsusb | grep Brother
-# Note the device (e.g., Bus 001 Device 004: ID 04f9:2044)
-
-# Configure
-cd ~/print-server
-cp config/shop.yaml.example config/local.yaml
-nano config/local.yaml
-# Update device path based on lsusb output
-
-# Deploy
-docker compose -f docker/docker-compose.prod.yaml up -d
-
-# Test
-curl http://localhost:5001/v1/health
-```
-
-## Moving to a Different Network (e.g., Home → Shop)
-
-The server uses DHCP by default, so it'll get an IP on any network.
-
-**Find it:**
-```bash
-ping printserver.local
-```
-
-**Set static IP (optional but recommended for shop):**
-```bash
-cd ~/print-server
-./scripts/set_static_ip.sh
-```
-
-**Revert to DHCP (if moving again):**
-```bash
-./scripts/revert_to_dhcp.sh
-```
-
-## Quick Reference
-
-| Task | How |
-|------|-----|
-| SSH in | `ssh print@printserver.local` |
-| System management | `https://printserver:9090` (Cockpit) |
-| Container management | `http://printserver:9000` (Portainer) |
-| View print server logs | `docker logs -f print-server` |
-| Restart print server | `docker restart print-server` |
-| Check printer status | `curl http://localhost:5001/v1/status` |
-| Set static IP | `./scripts/set_static_ip.sh` |
-| Revert to DHCP | `./scripts/revert_to_dhcp.sh` |
-
-## Firewall (Optional)
-
-If you want to restrict access:
-
-```bash
-sudo ufw allow 22/tcp    # SSH
-sudo ufw allow 5001/tcp  # Print server API
-sudo ufw allow 9000/tcp  # Portainer
-sudo ufw allow 9090/tcp  # Cockpit
-sudo ufw allow 631/tcp   # CUPS
-sudo ufw enable
-```
-
-## Troubleshooting
-
-**Can't find printserver.local:**
-- Check it's on the same network
-- Try the IP directly (check your router's DHCP list)
-- Make sure avahi-daemon is running: `sudo systemctl status avahi-daemon`
-
-**Label printer not detected:**
-```bash
-lsusb | grep Brother
-# If nothing, unplug and replug the USB
-```
-
-**Docker permission denied:**
-```bash
-# Did you log out and back in after bootstrap?
 exit
 # SSH back in
 ```
+
+**Install essentials:**
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y curl git htop
+```
+
+---
+
+## Step 4: Install Docker
+
+```bash
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker $USER
+```
+
+**Log out and back in** for Docker permissions to take effect.
+
+---
+
+## Step 5: Install Management UIs
+
+**Portainer** (container management):
+```bash
+sudo docker volume create portainer_data
+sudo docker run -d --name portainer --restart=always \
+  -p 9000:9000 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v portainer_data:/data \
+  portainer/portainer-ce:latest
+```
+
+**Cockpit** (system management):
+```bash
+sudo apt install -y cockpit
+sudo systemctl enable --now cockpit.socket
+```
+
+**CUPS** (document printing):
+```bash
+sudo apt install -y cups
+sudo usermod -aG lpadmin $USER
+sudo cupsctl --remote-admin
+```
+
+**Avahi** (for .local hostname):
+```bash
+sudo apt install -y avahi-daemon
+```
+
+---
+
+## Step 6: Setup USB Printer
+
+**Find printer:**
+```bash
+lsusb | grep Brother
+```
+
+**Set permissions:**
+```bash
+sudo chmod 666 /dev/usb/lp0
+```
+
+**Make permanent (udev rule):**
+```bash
+echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", MODE="0666", GROUP="plugdev"' | sudo tee /etc/udev/rules.d/99-brother-ql.rules
+sudo udevadm control --reload-rules
+```
+
+---
+
+## Step 7: Deploy Print Server
+
+**Clone repo:**
+```bash
+cd ~
+git clone https://github.com/YOUR_USERNAME/print-server.git
+cd print-server
+```
+
+**Create config:**
+```bash
+cp config/shop.yaml.example config/local.yaml
+nano config/local.yaml
+```
+
+Update the device path based on `lsusb` output.
+
+**Deploy:**
+```bash
+sudo docker compose -f docker/docker-compose.prod.yaml up -d --build
+```
+
+**Test:**
+```bash
+curl http://localhost:5001/v1/health
+curl http://localhost:5001/v1/status
+```
+
+---
+
+## Quick Reference
+
+| Task | Command |
+|------|---------|
+| SSH in | `ssh user@printserver.local` |
+| System management | `https://printserver:9090` |
+| Container management | `http://printserver:9000` |
+| View logs | `sudo docker logs docker-print-server-1 --tail 50` |
+| Restart | `sudo docker compose -f docker/docker-compose.prod.yaml restart` |
+| Check status | `curl http://localhost:5001/v1/status` |
+| Test print | `curl -X POST -F "file=@test.png" http://localhost:5001/v1/print/label` |
+
+---
+
+## Troubleshooting
+
+### Ubuntu installer crashes
+Use Debian instead. Known bug (#2045710) with Ubuntu 24.04 installer on Dell hardware.
+
+### Printer not detected
+```bash
+lsusb | grep Brother
+# If nothing, unplug and replug USB
+dmesg | tail -20  # Check for errors
+```
+
+### Docker can't access USB printer
+Add `privileged: true` to docker-compose.prod.yaml:
+```yaml
+services:
+  print-server:
+    privileged: true
+    # ... rest of config
+```
+
+### Print job fails with "No such device"
+```bash
+# Check device exists
+ls -la /dev/usb/lp0
+
+# Check permissions
+sudo chmod 666 /dev/usb/lp0
+
+# Restart container
+sudo docker compose -f docker/docker-compose.prod.yaml restart
+```
+
+### sudo: command not found
+```bash
+su -
+apt install -y sudo
+usermod -aG sudo username
+exit
+```
+
+### Can't find printserver.local
+```bash
+# Check avahi is running
+sudo systemctl status avahi-daemon
+
+# Use IP directly - check your router's DHCP list
+```
+
+---
+
+## See Also
+
+- [CLI Cheatsheet](cli-cheatsheet.md) - Common commands reference
+- [API Documentation](index.md) - Print server API endpoints
