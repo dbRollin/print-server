@@ -10,9 +10,9 @@ pillow>=10.0.0
 # Optional: PDF validation (page count)
 pypdf>=3.0.0
 
-# Optional: Real printer support (install as needed)
-# brother-ql>=0.9.4  # For Brother QL-series label printers
-# pycups>=2.0.1      # For CUPS document printing
+# Real printer support
+brother-ql>=0.9.4  # For Brother QL-series label printers
+# pycups>=2.0.1      # For CUPS document printing (uncomment if needed)
 
 # Development
 pytest>=7.4.0
