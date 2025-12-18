@@ -5,7 +5,7 @@ python-multipart>=0.0.6
 pyyaml>=6.0
 
 # Image processing (pinned for brother-ql compatibility)
-pillow>=9.5.0,<10.0.0
+pillow==9.5.0
 
 # Optional: PDF validation (page count)
 pypdf>=3.0.0
