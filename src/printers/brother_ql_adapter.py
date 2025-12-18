@@ -12,6 +12,12 @@ from .base import PrinterBase, PrintJob, PrintResult, PrinterStatus
 
 logger = logging.getLogger(__name__)
 
+# Pillow 10+ compatibility fix for brother_ql
+# ANTIALIAS was removed in Pillow 10, replaced with Resampling.LANCZOS
+from PIL import Image
+if not hasattr(Image, 'ANTIALIAS'):
+    Image.ANTIALIAS = Image.Resampling.LANCZOS
+
 # Import brother_ql only when actually used
 # This allows the module to be imported even without brother_ql installed
 try:
