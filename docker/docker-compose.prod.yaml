@@ -1,0 +1,33 @@
+# Production compose file - with USB passthrough for label printer
+# Requires: local.yaml configured with actual printer settings
+version: "3.8"
+
+services:
+  print-server:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    volumes:
+      - ../config:/app/config:ro
+    environment:
+      - CONFIG_FILE=/app/config/local.yaml
+    # USB device passthrough for Brother QL-720
+    # Find device with: lsusb | grep Brother
+    # devices:
+    #   - /dev/bus/usb/001/002:/dev/bus/usb/001/002
+    privileged: true  # Required for USB access (or use specific device mapping)
+    restart: unless-stopped
+
+  # Optional: CUPS server if not using host CUPS
+  # cups:
+  #   image: olbat/cupsd
+  #   ports:
+  #     - "631:631"
+  #   volumes:
+  #     - cups-data:/etc/cups
+  #   restart: unless-stopped
+
+# volumes:
+#   cups-data:

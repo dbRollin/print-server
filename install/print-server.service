@@ -1,0 +1,24 @@
+[Unit]
+Description=Print Gateway Server
+After=network.target cups.service
+Wants=cups.service
+
+[Service]
+Type=simple
+User=print
+Group=print
+WorkingDirectory=/home/print/print-server
+Environment=CONFIG_FILE=/home/print/print-server/config/local.yaml
+ExecStart=/home/print/print-server/.venv/bin/python -m src.main
+Restart=always
+RestartSec=5
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/print/print-server
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

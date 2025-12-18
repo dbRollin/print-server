@@ -1,0 +1,41 @@
+# Default configuration - uses mock printers for development
+# Copy to local.yaml and customize for your environment
+
+server:
+  host: "0.0.0.0"
+  port: 5001
+  debug: true
+  # cors_origins:
+  #   - "http://localhost:3000"
+  #   - "http://192.168.1.100:3000"
+
+printers:
+  - id: label
+    name: Mock Label Printer
+    adapter: mock_label
+    config:
+      print_delay: 0.5  # Simulated print time in seconds
+
+  - id: document
+    name: Mock Document Printer
+    adapter: mock_document
+    config:
+      print_delay: 1.0
+
+# Intent routing - map what you want to print to which printer
+# Your web app sends intent, server routes to the right printer
+routing:
+  # Labels
+  shipping-label: label
+  price-tag: label
+  barcode: label
+
+  # Documents
+  invoice: document
+  packing-slip: document
+  receipt: document
+
+# Default printers (fallback if intent not found)
+defaults:
+  label_printer: label
+  document_printer: document

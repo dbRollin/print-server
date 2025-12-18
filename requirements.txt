@@ -1,0 +1,20 @@
+# Core dependencies
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6
+pyyaml>=6.0
+
+# Image processing
+pillow>=10.0.0
+
+# Optional: PDF validation (page count)
+pypdf>=3.0.0
+
+# Optional: Real printer support (install as needed)
+# brother-ql>=0.9.4  # For Brother QL-series label printers
+# pycups>=2.0.1      # For CUPS document printing
+
+# Development
+pytest>=7.4.0
+pytest-asyncio>=0.23.0
+httpx>=0.26.0  # For testing FastAPI

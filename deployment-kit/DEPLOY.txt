@@ -1,0 +1,145 @@
+================================================================================
+                    PRINT SERVER DEPLOYMENT GUIDE
+================================================================================
+
+You have this USB stick. Here's what to do.
+
+--------------------------------------------------------------------------------
+PHASE 1: INSTALL UBUNTU (on the old machine)
+--------------------------------------------------------------------------------
+
+1. Plug USB into the old machine, power on
+2. Press F12 (or F2 or Del) during boot to get boot menu
+3. Select the USB drive
+4. When installer loads, choose "Install Ubuntu Server"
+
+INSTALLER ANSWERS (just follow the prompts):
+   - Language:        English
+   - Keyboard:        US (or your preference)
+   - Type of install: Ubuntu Server
+   - Network:         Just hit Done (DHCP is fine)
+   - Proxy:           Leave blank, hit Done
+   - Mirror:          Leave default, hit Done
+   - Storage:         Use entire disk, hit Done, then Confirm
+
+   - Profile setup:
+       Your name:     Print Server
+       Server name:   printserver        <-- IMPORTANT
+       Username:      print              <-- IMPORTANT
+       Password:      [pick something, remember it!]
+
+   - Ubuntu Pro:      Skip
+   - SSH Setup:       [X] Install OpenSSH server   <-- IMPORTANT (spacebar to check)
+   - Featured Snaps:  Don't select any, hit Done
+
+5. Wait for install to complete (~10 min)
+6. Select "Reboot Now"
+7. Remove the USB when prompted
+
+--------------------------------------------------------------------------------
+PHASE 2: BOOTSTRAP (from your other computer via SSH)
+--------------------------------------------------------------------------------
+
+After the machine reboots, go back to your other computer.
+
+1. Open a terminal (PowerShell, Git Bash, or WSL)
+
+2. SSH into the server:
+
+   ssh print@printserver.local
+
+   If that doesn't work, try:
+   ssh print@printserver
+
+   Or check your router for the IP and use:
+   ssh print@192.168.x.x
+
+3. Enter your password when prompted
+
+4. Run the bootstrap script:
+
+   curl -fsSL https://raw.githubusercontent.com/YOUR_REPO/print-server/main/scripts/bootstrap.sh | bash
+
+   OR if you copied files to the USB, mount it and run:
+
+   sudo mount /dev/sdb1 /mnt
+   bash /mnt/deployment-kit/setup.sh
+
+5. When it finishes, LOG OUT and log back in:
+
+   exit
+   ssh print@printserver.local
+
+--------------------------------------------------------------------------------
+PHASE 3: DEPLOY PRINT SERVER (still via SSH)
+--------------------------------------------------------------------------------
+
+1. Copy the print-server code to the server:
+
+   From your Windows machine (new terminal):
+   scp -r C:\Users\daveb\PROJECTS\print-server print@printserver.local:~/
+
+2. Back in SSH, configure and start:
+
+   cd ~/print-server
+   cp config/shop.yaml.example config/local.yaml
+
+   # If you have the label printer plugged in, find it:
+   lsusb | grep Brother
+   # Note the device info
+
+   # Edit config if needed:
+   nano config/local.yaml
+
+   # Start the server:
+   docker compose -f docker/docker-compose.prod.yaml up -d
+
+3. Test it:
+
+   curl http://localhost:5001/v1/health
+
+   Should return: {"status":"ok"}
+
+--------------------------------------------------------------------------------
+PHASE 4: VERIFY MANAGEMENT UIs (from any browser)
+--------------------------------------------------------------------------------
+
+Open these URLs on any computer on the same network:
+
+   Cockpit (system):      https://printserver.local:9090
+   Portainer (containers): http://printserver.local:9000
+   Print API:             http://printserver.local:5001/v1/health
+   CUPS (doc printing):   http://printserver.local:631
+
+For Portainer, create an admin account on first visit.
+
+--------------------------------------------------------------------------------
+QUICK REFERENCE
+--------------------------------------------------------------------------------
+
+SSH in:              ssh print@printserver.local
+View logs:           docker logs -f print-server
+Restart server:      docker restart print-server
+Check printer:       curl http://localhost:5001/v1/status
+Test print:          See scripts/smoke_test.sh
+
+Set static IP later: cd ~/print-server && ./scripts/set_static_ip.sh
+
+--------------------------------------------------------------------------------
+TROUBLESHOOTING
+--------------------------------------------------------------------------------
+
+Can't find printserver.local?
+  - Make sure both computers are on the same network
+  - Try ping printserver.local
+  - Check your router's DHCP list for the IP
+
+Docker permission denied?
+  - Did you log out and back in after bootstrap?
+  - Run: exit, then SSH back in
+
+Label printer not found?
+  - Unplug and replug the USB cable
+  - Run: lsusb | grep Brother
+
+================================================================================

@@ -1,0 +1,54 @@
+# Shop configuration - Brother QL-720 + MFC-L3750CDW
+# Rename to local.yaml and update device paths
+
+server:
+  host: "0.0.0.0"
+  port: 5001
+  debug: false
+  cors_origins:
+    - "http://192.168.1.*"  # Shop network
+
+printers:
+  - id: label
+    name: Brother QL-720
+    adapter: brother_ql
+    config:
+      model: QL-720NW
+      # Find with: lsusb or brother_ql discover
+      device: "usb://0x04f9:0x2044"
+      label: "62"  # 62mm continuous tape (DK-2205)
+
+  - id: document
+    name: Brother MFC-L3750CDW
+    adapter: cups
+    config:
+      # Find with: lpstat -p
+      cups_name: "Brother_MFC_L3750CDW"
+
+# Intent routing - map what you want to print to which printer
+# Change printer assignments here when hardware changes
+# Web app doesn't need to be updated!
+routing:
+  # Labels (all go to the QL-720)
+  shipping-label: label
+  price-tag: label
+  barcode: label
+  product-label: label
+
+  # Documents (all go to the MFC)
+  invoice: document
+  packing-slip: document
+  receipt: document
+  report: document
+
+# With extended format (optional descriptions):
+#   shipping-label:
+#     printer: label
+#     description: "4x6 shipping labels"
+#   invoice:
+#     printer: document
+#     description: "Customer invoices, letter size"
+
+defaults:
+  label_printer: label
+  document_printer: document

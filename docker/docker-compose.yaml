@@ -1,0 +1,15 @@
+# Development compose file - mock printers only
+version: "3.8"
+
+services:
+  print-server:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    volumes:
+      - ../config:/app/config:ro
+    environment:
+      - CONFIG_FILE=/app/config/default.yaml
+    restart: unless-stopped

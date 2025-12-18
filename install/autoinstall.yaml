@@ -1,0 +1,47 @@
+#cloud-config
+# Ubuntu Server 24.04 Autoinstall - MINIMAL
+# User: admin / Password: printserver
+
+autoinstall:
+  version: 1
+  interactive-sections: []
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+
+  early-commands:
+    - wipefs -af /dev/nvme0n1 2>/dev/null || wipefs -af /dev/sda 2>/dev/null || true
+    - sgdisk --zap-all /dev/nvme0n1 2>/dev/null || sgdisk --zap-all /dev/sda 2>/dev/null || true
+    - sleep 2
+
+  storage:
+    layout:
+      name: direct
+
+  network:
+    version: 2
+    ethernets:
+      id0:
+        match:
+          driver: "*"
+        dhcp4: true
+
+  identity:
+    hostname: printserver
+    username: admin
+    password: "$6$xyz123$dhHHz6wtK4q6.tPqI/HMJir3rgVINpN.nOnfdLjyfF4P2.LFJcxM3d4nAZ5RB1qk.GJbMntwAysNJFhP.A.8I0"
+
+  ssh:
+    install-server: true
+    allow-pw: true
+
+  packages:
+    - curl
+    - git
+    - htop
+
+  late-commands:
+    - echo 'admin ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/admin
+    - chmod 440 /target/etc/sudoers.d/admin
+
+  shutdown: reboot
