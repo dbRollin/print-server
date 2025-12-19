@@ -1,5 +1,5 @@
 # Production compose file - with USB passthrough for label printer
-# Requires: local.yaml configured with actual printer settings
+# Requires: shop.yaml configured with actual printer settings
 version: "3.8"
 
 services:
@@ -12,7 +12,7 @@ services:
     volumes:
       - ../config:/app/config:ro
     environment:
-      - CONFIG_FILE=/app/config/local.yaml
+      - CONFIG_FILE=/app/config/shop.yaml
     # USB device passthrough for Brother QL-720
     # Find device with: lsusb | grep Brother
     # devices:
