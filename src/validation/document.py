@@ -47,8 +47,9 @@ def validate_pdf(data: bytes) -> DocumentValidationResult:
     # Optional: use pypdf for deeper validation
     page_count = None
     try:
-        from pypdf import PdfReader
         from io import BytesIO
+
+        from pypdf import PdfReader
 
         reader = PdfReader(BytesIO(data))
         page_count = len(reader.pages)

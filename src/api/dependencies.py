@@ -4,7 +4,8 @@ Dependency injection for API routes.
 These are set up during app initialization.
 """
 
-from typing import Optional, Callable, Awaitable
+from typing import Awaitable, Callable, Optional
+
 from src.printers import PrinterRegistry
 from src.printers.base import PrintJob, PrintResult
 from src.queue import PrintQueue

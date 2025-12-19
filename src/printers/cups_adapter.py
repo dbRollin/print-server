@@ -6,9 +6,10 @@ Works with any CUPS-configured printer (network or local).
 """
 
 import logging
-import tempfile
 import os
-from .base import PrinterBase, PrintJob, PrintResult, PrinterStatus
+import tempfile
+
+from .base import PrinterBase, PrinterStatus, PrintJob, PrintResult
 
 logger = logging.getLogger(__name__)
 

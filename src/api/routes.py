@@ -5,12 +5,13 @@ Base URL: /v1
 """
 
 from datetime import datetime
-from fastapi import APIRouter, File, UploadFile, HTTPException, Query
-from fastapi.responses import JSONResponse
 from typing import Optional
 
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile
+from fastapi.responses import JSONResponse
+
 from src.api.dependencies import get_printer_registry, get_queue_manager, get_router
-from src.printers.base import PrintJob, PrinterStatus
+from src.printers.base import PrinterStatus, PrintJob
 from src.validation import validate_label_image, validate_pdf
 
 router = APIRouter(prefix="/v1")
@@ -68,20 +69,40 @@ async def health_check(detailed: bool = Query(default=False)):
 
 @router.get("/status")
 async def get_status():
-    """Get status of all printers."""
+    """Get status of all printers with device state info."""
     registry = get_printer_registry()
+    queue_manager = get_queue_manager()
     statuses = await registry.get_all_status()
 
-    return {
-        "printers": {
-            printer_id: {
-                "name": registry.get(printer_id).name,
-                "status": status.value,
-                "online": status in (PrinterStatus.READY, PrinterStatus.BUSY)
-            }
-            for printer_id, status in statuses.items()
+    result = {"printers": {}}
+
+    for printer_id, status in statuses.items():
+        printer = registry.get(printer_id)
+        queue = queue_manager.get_queue(printer_id)
+
+        printer_info = {
+            "name": printer.name,
+            "status": status.value,
+            "online": status in (PrinterStatus.READY, PrinterStatus.BUSY),
         }
-    }
+
+        # Add device state if available (BrotherQLAdapter has this)
+        device_state = getattr(printer, "device_state", None)
+        if device_state:
+            printer_info["last_seen"] = (
+                device_state.last_seen.isoformat() if device_state.last_seen else None
+            )
+            printer_info["last_error"] = device_state.last_error
+
+        # Add queue info
+        if queue:
+            queue_status = queue.get_status()
+            printer_info["queued_jobs"] = queue_status.get("queued", 0)
+            printer_info["queued_offline"] = queue_status.get("queued_offline", 0)
+
+        result["printers"][printer_id] = printer_info
+
+    return result
 
 
 @router.get("/queue")
@@ -134,10 +155,8 @@ async def print_label(
     if not printer:
         raise HTTPException(status_code=404, detail=f"Printer not found: {printer_id}")
 
-    # Check printer is online
+    # Check printer status
     status = await printer.get_status()
-    if status == PrinterStatus.OFFLINE:
-        raise HTTPException(status_code=503, detail="Printer offline")
     if status == PrinterStatus.ERROR:
         raise HTTPException(status_code=503, detail="Printer error")
 
@@ -185,8 +204,32 @@ async def print_label(
     if not is_valid:
         raise HTTPException(status_code=400, detail=error)
 
-    # Queue the job
+    # Queue the job - support offline queuing if enabled
     queue = queue_manager.get_or_create_queue(printer_id, printer.print)
+
+    # Handle offline printer with offline queuing
+    if status == PrinterStatus.OFFLINE:
+        # Check if offline queuing is enabled for this printer
+        resilience = getattr(printer, "resilience", None)
+        if resilience and resilience.offline_queue_enabled:
+            try:
+                queued = await queue.add_offline(job)
+                return JSONResponse(
+                    status_code=202,  # Accepted, not immediately processed
+                    content={
+                        "job_id": job.id,
+                        "status": queued.status.value,
+                        "message": "Printer offline - job queued",
+                        "queue_position": len(queue.get_queue()),
+                        "expires_at": queued.expires_at.isoformat() if queued.expires_at else None,
+                    }
+                )
+            except Exception as e:
+                raise HTTPException(status_code=503, detail=str(e))
+        else:
+            raise HTTPException(status_code=503, detail="Printer offline")
+
+    # Normal queuing for online printer
     try:
         queued = await queue.add(job)
     except Exception as e:
@@ -282,7 +325,7 @@ async def get_job(job_id: str):
     for queue in queue_manager.get_all_queues().values():
         job = queue.get_job(job_id)
         if job:
-            return {
+            result = {
                 "id": job.job.id,
                 "printer_id": job.job.printer_id,
                 "filename": job.job.filename,
@@ -292,6 +335,10 @@ async def get_job(job_id: str):
                 "completed_at": job.completed_at.isoformat() if job.completed_at else None,
                 "error": job.error
             }
+            # Include expiration for offline jobs
+            if job.expires_at:
+                result["expires_at"] = job.expires_at.isoformat()
+            return result
 
     raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
 

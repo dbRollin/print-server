@@ -6,7 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Print Gateway Server - a centralized REST API server for handling print requests from internal web applications.
 
-**Target Platform:** Ubuntu Server 24.04 LTS (Dell Mini Tower) running Docker containers
+**Target Platform:** Ubuntu Server 24.04 LTS or Debian 13+ (Dell Mini Tower) running Docker containers
+
+**Python:** 3.11+ required
 
 ## Commands
 
@@ -25,7 +27,7 @@ pytest
 pytest tests/test_validation.py -v       # Single file
 pytest -k test_valid_monochrome          # By name pattern
 
-# Lint
+# Lint (line-length: 100, target: py311)
 ruff check src/                          # Check code
 ruff check src/ --fix                    # Auto-fix issues
 
@@ -51,12 +53,17 @@ config/            # YAML configs (default.yaml, shop.yaml.example)
 ### Printer Adapter Pattern
 
 All printers implement `PrinterBase` (src/printers/base.py):
-- `get_status()` - Check if ready
-- `print(job)` - Execute print
-- `validate_job(job)` - Pre-queue validation
+- `get_status()` → `PrinterStatus` (READY, BUSY, OFFLINE, ERROR)
+- `print(job: PrintJob)` → `PrintResult`
+- `validate_job(job)` → `tuple[bool, str]` - Pre-queue validation
 - `supported_content_types` - MIME types accepted
 
-Add new printers by creating an adapter and registering in config.
+Available adapters (src/config.py `ADAPTER_TYPES`):
+- `mock_label` / `mock_document` - Development/testing
+- `brother_ql` - Brother QL series label printers (USB)
+- `cups` - Document printers via CUPS
+
+Printers are registered via `PrinterRegistry` (src/printers/registry.py).
 
 ### Intent-Based Routing (src/routing.py)
 
@@ -81,9 +88,11 @@ YAML config files in `config/`. Server loads in order:
 ## Critical Requirements
 
 ### Label Image Validation (src/validation/image.py)
-- Must be exactly 720px wide
-- Must be monochrome PNG (black/white only)
+- Must be exactly 720px wide (for QL-720 at 300 DPI on 62mm tape)
+- Must be monochrome PNG (black/white only, modes: 1, L, RGB accepted)
 - Validation happens BEFORE queuing
+
+Validation error codes: `INVALID_IMAGE`, `INVALID_FORMAT`, `INVALID_WIDTH`, `NOT_MONOCHROME`
 
 ### API Error Codes
 - 400: Invalid format/validation failure

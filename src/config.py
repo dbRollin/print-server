@@ -2,19 +2,51 @@
 Configuration loading and printer setup.
 """
 
-import os
 import logging
+import os
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
 import yaml
 
 from src.printers import PrinterRegistry
-from src.printers.mock import MockLabelPrinter, MockDocumentPrinter
 from src.printers.brother_ql_adapter import BrotherQLAdapter
 from src.printers.cups_adapter import CUPSAdapter
+from src.printers.mock import MockDocumentPrinter, MockLabelPrinter
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class ResilienceConfig:
+    """USB resilience configuration for printers."""
+
+    auto_reconnect: bool = True
+    max_retries: int = 3
+    retry_delay_ms: int = 1000
+    health_check_interval_sec: float = 30.0
+    offline_queue_enabled: bool = True
+    offline_queue_timeout_sec: float = 600.0  # 10 minutes
+
+    @classmethod
+    def from_dict(cls, config: dict) -> "ResilienceConfig":
+        """Create ResilienceConfig from a dictionary (YAML config section)."""
+        resilience = config.get("resilience", {})
+        return cls(
+            auto_reconnect=resilience.get("auto_reconnect", True),
+            max_retries=resilience.get("max_retries", 3),
+            retry_delay_ms=resilience.get("retry_delay_ms", 1000),
+            health_check_interval_sec=resilience.get("health_check_interval_sec", 30.0),
+            offline_queue_enabled=resilience.get("offline_queue_enabled", True),
+            offline_queue_timeout_sec=resilience.get("offline_queue_timeout_sec", 600.0),
+        )
+
+    @property
+    def retry_delay_sec(self) -> float:
+        """Get retry delay in seconds."""
+        return self.retry_delay_ms / 1000.0
+
 
 # Map adapter types to classes
 ADAPTER_TYPES = {
@@ -97,6 +129,10 @@ def setup_printers(config: dict) -> PrinterRegistry:
         adapter_type = printer_conf.get("adapter")
         adapter_config = printer_conf.get("config", {})
 
+        # Merge resilience config into adapter config for adapters that support it
+        if "resilience" in printer_conf:
+            adapter_config["resilience"] = printer_conf["resilience"]
+
         if not printer_id:
             logger.warning("Printer config missing 'id', skipping")
             continue
@@ -124,4 +160,5 @@ def get_server_config(config: dict) -> dict:
         "port": server.get("port", 5001),
         "debug": server.get("debug", False),
         "cors_origins": server.get("cors_origins", None),
+        "health_check_interval_sec": server.get("health_check_interval_sec", 30.0),
     }

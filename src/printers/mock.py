@@ -1,6 +1,7 @@
 import asyncio
 import logging
-from .base import PrinterBase, PrintJob, PrintResult, PrinterStatus
+
+from .base import PrinterBase, PrinterStatus, PrintJob, PrintResult
 
 logger = logging.getLogger(__name__)
 

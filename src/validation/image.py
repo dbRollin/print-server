@@ -11,6 +11,7 @@ Per spec requirements:
 from dataclasses import dataclass
 from io import BytesIO
 from typing import Optional
+
 from PIL import Image
 
 

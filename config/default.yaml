@@ -5,6 +5,7 @@ server:
   host: "0.0.0.0"
   port: 5001
   debug: true
+  health_check_interval_sec: 30  # USB printer status check frequency
   # cors_origins:
   #   - "http://localhost:3000"
   #   - "http://192.168.1.100:3000"

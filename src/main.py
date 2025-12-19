@@ -8,9 +8,9 @@ import sys
 
 import uvicorn
 
-from src.config import load_config, setup_printers, get_server_config
 from src.api.server import create_app
-from src.startup import run_startup_checks, print_startup_banner
+from src.config import get_server_config, load_config, setup_printers
+from src.startup import print_startup_banner, run_startup_checks
 
 logging.basicConfig(
     level=logging.INFO,
@@ -81,7 +81,8 @@ def main():
         printers=printers,
         routing_config=config,
         cors_origins=server_config.get("cors_origins"),
-        debug=server_config.get("debug", False)
+        debug=server_config.get("debug", False),
+        health_check_interval_sec=server_config.get("health_check_interval_sec", 30.0)
     )
 
     # Print startup banner
