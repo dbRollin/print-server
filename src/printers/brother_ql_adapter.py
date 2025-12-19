@@ -176,8 +176,9 @@ class BrotherQLAdapter(PrinterBase):
                 if device_id == self.device:
                     return True
 
-                # Also check if device matches by stripping protocol prefix
-                if self.device.startswith("usb://") and device_id == self.device:
+                # brother_ql may append serial/suffix to device ID (e.g., usb://0x04f9:0x2044_XX)
+                # Match if discovered device starts with our configured device path
+                if self.device.startswith("usb://") and device_id.startswith(self.device):
                     return True
 
             return False
@@ -357,7 +358,10 @@ class BrotherQLAdapter(PrinterBase):
             # Look for our configured device
             for device_info in devices:
                 device_id = device_info.get("identifier", "")
-                if device_id == self.device:
+                # Exact match or prefix match (brother_ql may append serial suffix)
+                if device_id == self.device or (
+                    self.device.startswith("usb://") and device_id.startswith(self.device)
+                ):
                     self._device_state.is_connected = True
                     self._device_state.last_seen = datetime.now()
                     self._emit_event("USB_RECONNECTED", self.device)
